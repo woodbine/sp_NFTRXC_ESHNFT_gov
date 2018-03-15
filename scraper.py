@@ -9,7 +9,9 @@ import urllib2
 from datetime import datetime
 from bs4 import BeautifulSoup
 
-#### FUNCTIONS 1.0
+#### FUNCTIONS 1.1
+import requests
+
 
 def validateFilename(filename):
     filenameregex = '^[a-zA-Z0-9]+_[a-zA-Z0-9]+_[a-zA-Z0-9]+_[0-9][0-9][0-9][0-9]_[0-9QY][0-9]$'
@@ -85,49 +87,25 @@ def convert_mth_strings ( mth_string ):
 #### VARIABLES 1.0
 
 entity_id = "NFTRXC_ESHNFT_gov"
-url = "http://www.esht.nhs.uk/finance/transparency/"
+url = "https://www.esht.nhs.uk/about-the-trust/transparency-foi/financial-transparency/"
 errors = 0
 data = []
 
 #### READ HTML 1.0
 
 
-html = urllib2.urlopen(url)
-soup = BeautifulSoup(html, 'lxml')
+html = requests.get(url, headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36'})
+soup = BeautifulSoup(html.text, 'lxml')
 
 
 #### SCRAPE DATA
-
-links = soup.find_all('a')
+links = soup.find('div', 'accordion').find_all('a', href=True)
 for link in links:
-    if '=Attachment' in link['href']:
-        if 'http://' not in link['href']:
-            year_url = 'http://www.esht.nhs.uk'+link['href']
-        else:
-            year_url = link['href']
-        file_title = link['title']
-        csvMth = file_title[:3]
-        csvYr = file_title[-4:]
-        if '2014' in csvYr:
-            break
-        csvMth = convert_mth_strings(csvMth.upper())
-        data.append([csvYr, csvMth, year_url])
-html = urllib2.urlopen('https://data.gov.uk/dataset/spending-in-east-sussex-healthcare-nhs-trust')
-soup = BeautifulSoup(html, 'lxml')
-blocks = soup.find_all('div', 'dropdown')
-for block in blocks:
-    file_url = ''
-    try:
-        file_url = block.find('ul', 'dropdown-menu').find_all('li')[1].find('a')['href']
-    except:
-        pass
-    if '=Attachment' in file_url:
-        url = file_url
-        title = block.find_previous('div', 'dataset-resource-text').text.strip()
-        csvMth = title.split()[1][:3]
-        csvYr = title.split()[2]
-        if '2015' in csvYr:
-            continue
+    if '.csv' in link['href']:
+        url = link['href']
+        file_title = link.text
+        csvMth = file_title.split()[0][:3]
+        csvYr = file_title.split()[1]
         csvMth = convert_mth_strings(csvMth.upper())
         data.append([csvYr, csvMth, url])
 
